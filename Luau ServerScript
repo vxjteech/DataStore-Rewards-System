@@ -1,0 +1,125 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local DataStoreService = game:GetService("DataStoreService")
+local ReplicatedStorage = game:GetService('ReplicatedStorage')
+
+local gameDataStore = DataStoreService:GetDataStore("FBICodes") 
+-- DONT CHANGE THIS OR YOU WILL RESET ALL MONEY VALUES
+-- DONT CHANGE THIS OR YOU WILL RESET ALL MONEY VALUES
+-- DONT CHANGE THIS OR YOU WILL RESET ALL MONEY VALUES
+-- DONT CHANGE THIS OR YOU WILL RESET ALL MONEY VALUES
+-- DONT CHANGE THIS OR YOU WILL RESET ALL MONEY VALUES
+
+
+local Codes = {
+	{"2024",2000}
+}
+
+local needCurrency = true -- Turn to false if you already Have Currency
+local currencyName = "Money" -- Your Currency Name
+
+local function save(p)
+	local saved,failed = pcall(function()
+		local usedCodes = {}
+		local dataSaving = {}
+		for i, v in pairs(p.CodesFolder:GetChildren()) do 
+			if v.Value == true then
+				table.insert(usedCodes,v.Name)
+			end
+		end
+		table.insert(dataSaving,usedCodes)
+		if needCurrency == true then
+			table.insert(dataSaving,p.leaderboard[currencyName].Value)
+		end
+		gameDataStore:SetAsync(p.UserId,dataSaving)
+	end)
+	if not saved then warn(failed) end
+end
+
+local function load(p)
+	local CodeFolder = Instance.new("Folder")
+	CodeFolder.Name = "CodesFolder"
+	CodeFolder.Parent = p
+	
+	for i, v in pairs(Codes) do 
+		local newV = Instance.new("BoolValue")
+		newV.Parent = CodeFolder
+		newV.Value = false
+		newV.Name = v[1]
+	end
+	
+	if needCurrency == true then
+		local NewFolder = Instance.new("Folder")
+		NewFolder.Name = "leaderboard"
+		NewFolder.Parent = p
+		
+		local NewC = Instance.new("IntValue")
+		NewC.Value = 0
+		NewC.Parent = NewFolder
+		NewC.Name = currencyName
+	end
+	
+	local data
+	local gotdata,newplr = pcall(function()
+		data = gameDataStore:GetAsync(p.UserId)
+	end)
+	if data and gotdata then
+		local trues = data[1]
+		for i, v in pairs(trues) do 
+			CodeFolder[v].Value = true
+		end
+		if data[2] then
+			p.leaderboard[currencyName].Value = data[2]
+		end
+	end
+end
+
+ReplicatedStorage.codeEvent.OnServerEvent:Connect(function(Player,Entered)
+	local folder = Player.CodesFolder
+	if folder:FindFirstChild(Entered) then
+		if folder[Entered].Value == false then
+			local FoundTABLE
+			for i, v in pairs(Codes) do 
+				if v[1] == Entered then
+					FoundTABLE = v
+					break
+				end
+			end
+			if FoundTABLE then
+				folder[Entered].Value = true
+				Player.leaderboard[currencyName].Value += FoundTABLE[2]
+			end
+		else
+			--// Already Redeemed
+		end
+	else
+		--// Invalid Code
+	end
+end)
+
+Players.PlayerAdded:Connect(function(Player)
+	local fired = false
+	Player.CharacterAdded:Connect(function()
+		if fired == false then
+			fired = true
+			delay(1,function()
+				ReplicatedStorage.codeEvent:FireClient(Player,Codes)
+			end)
+		end
+	end)
+	load(Player)
+end)
+
+Players.PlayerRemoving:Connect(function(Player)
+	save(Player)
+end)
+
+game:BindToClose(function()
+	if RunService:IsStudio() then
+		wait(1)
+	else
+		for _, p in pairs(Players:GetPlayers()) do 
+			save(p)
+		end
+	end
+end)
