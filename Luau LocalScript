@@ -1,0 +1,97 @@
+local EnterBox = script.Parent.Box
+local Redeem = EnterBox.Parent.Redeem
+local Open = EnterBox.Parent.Parent.Sidebar.Container.Codes.ImageButton
+
+local Player = game:GetService("Players").LocalPlayer
+local ClickDB = false
+
+local code_event = game:GetService("ReplicatedStorage").codeEvent
+code_event.OnClientEvent:Connect(function(code_table)
+	local function shake()
+		local main_frame = EnterBox.Parent
+		local shake_duration = 3
+		local shake_speed = 0.1
+		
+		local upper_limit = 8
+		local lower_limit = -4
+		for i=1,shake_duration do 
+			local y_offset = math.random(lower_limit,upper_limit)
+			local x_offset = math.random(lower_limit,upper_limit)
+			local target = UDim2.new(main_frame.Position.X.Scale,x_offset,main_frame.Position.Y.Scale,y_offset)
+			main_frame:TweenPosition(target,Enum.EasingDirection.Out,Enum.EasingStyle.Linear,shake_speed,true)
+			wait(shake_speed)	
+		end
+		main_frame:TweenPosition(UDim2.new(0.5,0,0.5,0),Enum.EasingDirection.Out,Enum.EasingStyle.Linear,shake_speed,true)
+	end
+	local function button_clicked()
+		local code_valid = false
+		for _, code_index in pairs(code_table) do 
+			if EnterBox.Text == code_index[1] then
+				code_valid = true
+				break
+			end
+		end
+		if code_valid == true then
+			local plr_codes = Player['CodesFolder']
+			if plr_codes:FindFirstChild(EnterBox.Text) then
+				if plr_codes[EnterBox.Text].Value == false then
+					code_event:FireServer(EnterBox.Text)
+					
+					EnterBox.TextColor3 = Color3.fromRGB(0, 170, 127)
+					EnterBox.TextEditable = false
+					EnterBox.Text = 'Code Redeemed!'
+					delay(1,function()
+						EnterBox.TextEditable = true
+						EnterBox.Text = ''
+						EnterBox.TextColor3 = Color3.fromRGB(171, 171, 171)
+					end)
+					wait(1.5)
+					script.Parent:TweenPosition(UDim2.new(0.5,0,1.5,0),"Out","Sine",0.5)
+				else
+					shake()
+					EnterBox.TextColor3 = Color3.fromRGB(255, 8, 61)
+					EnterBox.TextEditable = false
+					EnterBox.Text = 'Code Already Redeemed!'
+					delay(1.25,function()
+						EnterBox.TextEditable = true
+						EnterBox.Text = ''
+						EnterBox.TextColor3 = Color3.fromRGB(171, 171, 171)
+					end)
+				end
+			end
+		else
+			shake()
+			EnterBox.TextColor3 = Color3.fromRGB(255, 8, 61)
+			EnterBox.TextEditable = false
+			EnterBox.Text = 'Invalid Code!'
+			delay(1.25,function()
+				EnterBox.TextEditable = true
+				EnterBox.Text = ''
+				EnterBox.TextColor3 = Color3.fromRGB(171, 171, 171)
+			end)
+		end
+	end
+	local frame_open = false
+	Open.Activated:Connect(function()
+		if ClickDB == false then
+			ClickDB = true
+			
+			Redeem.Parent.Visible = not frame_open
+			if frame_open == false then
+				frame_open = true
+			else
+				frame_open = false
+			end
+			wait(0.15)
+			ClickDB = false
+		end
+	end)
+	Redeem.Activated:Connect(function()
+		if ClickDB == false then
+			ClickDB = true
+			button_clicked()
+			wait(0.15)
+			ClickDB = false
+		end
+	end)	
+end)
